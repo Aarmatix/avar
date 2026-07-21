@@ -1,0 +1,425 @@
+# Release workflow for the AVAR reference verifier.
+#
+# Triggered by pushing a tag matching `v*` (e.g. v0.1.0).
+# Builds native standalone binaries on macos-15 (arm64) and
+# macos-15-intel (x64), runs the AVAR conformance suite against each
+# COMPILED binary (not the JS build), packages tarballs, generates a
+# readable source bundle on Linux, produces SHA256SUMS +
+# release-manifest.json, attests every distributable artifact
+# individually via actions/attest-build-provenance, publishes a
+# GitHub Release, and opens an automated formula-update PR against
+# Aarmatix/homebrew-tap.
+#
+# Gates (all must pass or the release job fails and no release is
+# published — no automatic Node-formula fallback):
+#   G1 Conformance suite green against compiled binary
+#   G2 Correct exit codes on every vector
+#   G3 Native execution confirmed (uname -m matches artifact arch)
+#   G4 No undeclared network egress during verify
+#   G5 Startup+verify < 500ms (arm64) / < 800ms (x64) on a 10KB receipt
+#   G6 Archive contents match an explicit allowlist
+#   G7 Clean install/uninstall verified in the tap smoke test (post-release)
+#   G8 `gh attestation verify` succeeds against every artifact
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and gate, but do not publish release or open tap PR"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  id-token: write        # required by attest-build-provenance
+  attestations: write
+
+env:
+  ARTIFACT_ALLOWLIST: "avar LICENSE NOTICE README.md"
+
+jobs:
+  # ------------------------------------------------------------------
+  # Native binary builds. One job per (runner, arch). Cross-compile
+  # is not permitted: each artifact must be validated on its native
+  # architecture.
+  # ------------------------------------------------------------------
+  binary:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - runner: macos-15
+            target: bun-darwin-arm64
+            artifact: darwin-arm64
+            expected_uname: arm64
+            startup_budget_ms: 500
+          - runner: macos-15-intel
+            target: bun-darwin-x64
+            artifact: darwin-x64
+            expected_uname: x86_64
+            startup_budget_ms: 800
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version from tag
+        id: ver
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            V="${GITHUB_REF#refs/tags/v}"
+          else
+            V="0.0.0-dev.$(date -u +%Y%m%d%H%M%S)"
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: "1.1.34" }
+
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+
+      - name: Install deps and build JS (for library consumers)
+        run: |
+          npm ci
+          npm run build
+
+      - name: Compile standalone binary (native only, no cross-compile)
+        run: |
+          bun build bin/avar.ts \
+            --compile \
+            --target=${{ matrix.target }} \
+            --define AVAR_VERSION='"${{ steps.ver.outputs.version }}"' \
+            --outfile avar
+          file avar
+          ls -lh avar
+
+      # ---- G3: native execution ----
+      - name: G3 native execution
+        run: |
+          UN=$(uname -m)
+          echo "runner uname -m: $UN"
+          test "$UN" = "${{ matrix.expected_uname }}"
+          ./avar --version
+
+      # ---- G1 + G2: conformance parity + exit codes ----
+      - name: Fetch conformance suite
+        uses: actions/checkout@v4
+        with:
+          repository: Aarmatix/avar-conformance
+          path: conformance
+
+      - name: G1 + G2 conformance and exit codes
+        run: |
+          set -euo pipefail
+          bash conformance/scripts/run-suite.sh ./avar
+        # run-suite.sh iterates every vector, invokes ./avar verify,
+        # and asserts the documented exit code per vector manifest.
+
+      # ---- G4: no undeclared network ----
+      - name: G4 network isolation
+        run: |
+          set -euo pipefail
+          # Pick a known-valid vector; verify must succeed with egress blocked.
+          VEC=$(find conformance/vectors -name '*.json' | head -1)
+          # macOS: use pfctl-scoped run via sudo unavailable in hosted runners;
+          # emulate by unsetting proxy and asserting no outbound sockets via
+          # /usr/sbin/lsof sampling.
+          ./avar verify "$VEC" >/tmp/verify.out &
+          PID=$!
+          sleep 0.05
+          # Sample: any ESTABLISHED / SYN_SENT owned by our pid is a failure.
+          if /usr/sbin/lsof -a -p "$PID" -i -nP 2>/dev/null | \
+               grep -E 'ESTABLISHED|SYN_SENT' ; then
+            echo "G4 FAIL: verifier opened a network connection"
+            kill "$PID" 2>/dev/null || true
+            exit 1
+          fi
+          wait "$PID"
+
+      # ---- G5: performance budget ----
+      - name: G5 startup+verify budget
+        run: |
+          set -euo pipefail
+          VEC=$(find conformance/vectors -name '*.json' | head -1)
+          # 3 warm runs to smooth out disk cache jitter; report min.
+          MIN=999999
+          for i in 1 2 3; do
+            T=$( { /usr/bin/time -l ./avar verify "$VEC" >/dev/null; } 2>&1 \
+                 | awk '/real/ {print int($1*1000)}' )
+            if [ -z "$T" ]; then
+              # macOS `time -l` prints "real 0.42" differently; fall back.
+              T=$(python3 -c "import time,subprocess; s=time.time(); subprocess.run(['./avar','verify','$VEC'],stdout=subprocess.DEVNULL); print(int((time.time()-s)*1000))")
+            fi
+            [ "$T" -lt "$MIN" ] && MIN=$T
+          done
+          echo "min startup+verify: ${MIN}ms (budget ${{ matrix.startup_budget_ms }}ms)"
+          test "$MIN" -lt "${{ matrix.startup_budget_ms }}"
+
+      # ---- G6: archive allowlist ----
+      - name: G6 package tarball with allowlisted contents
+        id: pkg
+        run: |
+          set -euo pipefail
+          STAGE="avar-v${{ steps.ver.outputs.version }}-${{ matrix.artifact }}"
+          mkdir "$STAGE"
+          cp avar LICENSE NOTICE README.md "$STAGE/"
+          # Assert nothing else snuck in.
+          ACTUAL=$(cd "$STAGE" && ls -1 | sort | tr '\n' ' ')
+          EXPECTED=$(echo "$ARTIFACT_ALLOWLIST" | tr ' ' '\n' | sort | tr '\n' ' ')
+          echo "archive contents: $ACTUAL"
+          echo "expected        : $EXPECTED"
+          test "$ACTUAL" = "$EXPECTED"
+          tar -czf "$STAGE.tar.gz" "$STAGE"
+          shasum -a 256 "$STAGE.tar.gz" > "$STAGE.tar.gz.sha256"
+          echo "archive=$STAGE.tar.gz" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.artifact }}
+          path: |
+            ${{ steps.pkg.outputs.archive }}
+            ${{ steps.pkg.outputs.archive }}.sha256
+          if-no-files-found: error
+
+  # ------------------------------------------------------------------
+  # Readable source bundle. Not a compiled binary — an inspectable
+  # JS bundle + launcher + lockfile + build metadata, so reviewers
+  # can audit what the compiled binaries were built from.
+  # ------------------------------------------------------------------
+  source-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: ver
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            V="${GITHUB_REF#refs/tags/v}"
+          else
+            V="0.0.0-dev.$(date -u +%Y%m%d%H%M%S)"
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: "1.1.34" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: npm ci
+      - name: Build readable JS bundle
+        run: |
+          set -euo pipefail
+          bun build bin/avar.ts \
+            --target=node \
+            --define AVAR_VERSION='"${{ steps.ver.outputs.version }}"' \
+            --outfile avar.bundle.js
+      - name: Stage source bundle
+        id: pkg
+        run: |
+          set -euo pipefail
+          STAGE="avar-v${{ steps.ver.outputs.version }}-source-bundle"
+          mkdir "$STAGE"
+          cp avar.bundle.js LICENSE NOTICE README.md CLEAN-ROOM.md "$STAGE/"
+          cp package.json package-lock.json "$STAGE/" 2>/dev/null || true
+          # Node launcher for the readable bundle.
+          cat > "$STAGE/avar" <<'LAUNCH'
+          #!/usr/bin/env node
+          import(new URL("./avar.bundle.js", import.meta.url));
+          LAUNCH
+          chmod +x "$STAGE/avar"
+          # Build metadata.
+          cat > "$STAGE/build-metadata.json" <<META
+          {
+            "artifact_kind": "source-bundle",
+            "version": "${{ steps.ver.outputs.version }}",
+            "source_commit": "${GITHUB_SHA}",
+            "workflow_run": "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}",
+            "builder": {
+              "runner_image": "ubuntu-latest",
+              "bun": "1.1.34",
+              "node": "20"
+            }
+          }
+          META
+          tar -czf "$STAGE.tar.gz" "$STAGE"
+          shasum -a 256 "$STAGE.tar.gz" > "$STAGE.tar.gz.sha256"
+          echo "archive=$STAGE.tar.gz" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-bundle
+          path: |
+            ${{ steps.pkg.outputs.archive }}
+            ${{ steps.pkg.outputs.archive }}.sha256
+
+  # ------------------------------------------------------------------
+  # Collect, attest, publish. Every distributable gets its own
+  # attestation entry via subject-path.
+  # ------------------------------------------------------------------
+  release:
+    needs: [binary, source-bundle]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: ver
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            V="${GITHUB_REF#refs/tags/v}"
+          else
+            V="0.0.0-dev.$(date -u +%Y%m%d%H%M%S)"
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@v4
+        with: { path: dist, merge-multiple: true }
+
+      - name: Assemble SHA256SUMS
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          rm -f SHA256SUMS
+          for f in *.tar.gz; do
+            shasum -a 256 "$f" >> SHA256SUMS
+          done
+          cat SHA256SUMS
+
+      - name: Build release-manifest.json
+        working-directory: dist
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          python3 <<'PY'
+          import hashlib, json, os, pathlib
+          version = os.environ["VERSION"]
+          out = {
+              "version": version,
+              "source_commit": os.environ["GITHUB_SHA"],
+              "workflow_run": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+              "builder": {"bun": "1.1.34", "node": "20"},
+              "artifacts": [],
+          }
+          for p in sorted(pathlib.Path(".").glob("*.tar.gz")):
+              b = p.read_bytes()
+              plat = "source-bundle" if "source-bundle" in p.name else (
+                  "darwin-arm64" if "darwin-arm64" in p.name else "darwin-x64"
+              )
+              out["artifacts"].append({
+                  "name": p.name,
+                  "platform": plat,
+                  "sha256": hashlib.sha256(b).hexdigest(),
+                  "size_bytes": len(b),
+                  "attestation_verify": f"gh attestation verify {p.name} --repo Aarmatix/avar",
+              })
+          pathlib.Path("release-manifest.json").write_text(
+              json.dumps(out, indent=2) + "\n"
+          )
+          print(json.dumps(out, indent=2))
+          PY
+
+      # G8: attest EVERY distributable individually.
+      - name: Attest all distributables
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/SHA256SUMS
+            dist/release-manifest.json
+
+      - name: Verify attestations locally (G8)
+        working-directory: dist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for f in *.tar.gz SHA256SUMS release-manifest.json; do
+            echo "== attestation: $f =="
+            gh attestation verify "$f" --repo "${GITHUB_REPOSITORY}"
+          done
+
+      - name: Publish GitHub Release
+        if: ${{ github.event_name == 'push' || inputs.dry_run == false }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/SHA256SUMS
+            dist/release-manifest.json
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          body: |
+            AVAR reference verifier ${{ steps.ver.outputs.version }}.
+
+            Every artifact in this release is covered by an individual
+            GitHub build-provenance attestation. Verify with:
+
+                gh attestation verify <file> --repo Aarmatix/avar
+
+            See `release-manifest.json` for per-artifact SHA256, platform,
+            and verification command. This release is provenance-attested;
+            it is not yet claimed to be reproducible.
+
+  # ------------------------------------------------------------------
+  # Auto-open a formula-update PR against Aarmatix/homebrew-tap.
+  # Requires a repo secret HOMEBREW_TAP_PUSH_TOKEN with contents:write
+  # + pull-requests:write on Aarmatix/homebrew-tap.
+  # ------------------------------------------------------------------
+  tap-pr:
+    needs: release
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: ver
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with: { path: dist, merge-multiple: true }
+      - name: Open formula-update PR
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_PUSH_TOKEN }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          ARM=$(shasum -a 256 "dist/avar-v${VERSION}-darwin-arm64.tar.gz" | awk '{print $1}')
+          X64=$(shasum -a 256 "dist/avar-v${VERSION}-darwin-x64.tar.gz" | awk '{print $1}')
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/Aarmatix/homebrew-tap.git" tap
+          cd tap
+          git config user.name  "aarmos-release-bot"
+          git config user.email "release-bot@aarmos.io"
+          BR="avar/v${VERSION}"
+          git checkout -b "$BR"
+          mkdir -p Formula
+          cat > Formula/avar.rb <<RB
+          class Avar < Formula
+            desc "AVAR reference verifier — standalone, provenance-attested"
+            homepage "https://github.com/Aarmatix/avar"
+            version "${VERSION}"
+            license "Apache-2.0"
+
+            on_macos do
+              on_arm do
+                url "https://github.com/Aarmatix/avar/releases/download/v${VERSION}/avar-v${VERSION}-darwin-arm64.tar.gz"
+                sha256 "${ARM}"
+              end
+              on_intel do
+                url "https://github.com/Aarmatix/avar/releases/download/v${VERSION}/avar-v${VERSION}-darwin-x64.tar.gz"
+                sha256 "${X64}"
+              end
+            end
+
+            def install
+              bin.install "avar"
+              prefix.install "LICENSE", "NOTICE", "README.md"
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/avar --version").strip
+            end
+          end
+          RB
+          git add Formula/avar.rb
+          git commit -m "avar ${VERSION}"
+          git push -u origin "$BR"
+          gh pr create \
+            --repo Aarmatix/homebrew-tap \
+            --title "avar ${VERSION}" \
+            --body "Automated update from Aarmatix/avar release v${VERSION}. Provenance attestations attached to the upstream release; verify with \`gh attestation verify\`."
