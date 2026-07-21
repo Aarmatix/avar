@@ -1,22 +1,22 @@
 # Release workflow for the AVAR reference verifier.
 #
-# Triggered by pushing a tag matching `v*` (e.g. v0.1.0).
-# Builds native standalone binaries on macos-15 (arm64) and
-# macos-15-intel (x64), runs the AVAR conformance suite against each
-# COMPILED binary (not the JS build), packages tarballs, generates a
-# readable source bundle on Linux, produces SHA256SUMS +
+# Triggered by pushing a tag matching `v*` (e.g. v0.1.1).
+# Builds native standalone binaries on macos-15 (darwin-arm64),
+# macos-15-intel (darwin-x64), ubuntu-latest (linux-x64), and
+# ubuntu-24.04-arm (linux-arm64), runs the AVAR conformance suite
+# against each COMPILED binary (not the JS build), packages tarballs,
+# generates a readable source bundle on Linux, produces SHA256SUMS +
 # release-manifest.json, attests every distributable artifact
 # individually via actions/attest-build-provenance, publishes a
 # GitHub Release, and opens an automated formula-update PR against
 # Aarmatix/homebrew-tap.
 #
-# Gates (all must pass or the release job fails and no release is
-# published — no automatic Node-formula fallback):
+# Gates (all must pass or the release job fails):
 #   G1 Conformance suite green against compiled binary
 #   G2 Correct exit codes on every vector
 #   G3 Native execution confirmed (uname -m matches artifact arch)
 #   G4 No undeclared network egress during verify
-#   G5 Startup+verify < 500ms (arm64) / < 800ms (x64) on a 10KB receipt
+#   G5 Startup+verify within per-target budget on a 10KB receipt
 #   G6 Archive contents match an explicit allowlist
 #   G7 Clean install/uninstall verified in the tap smoke test (post-release)
 #   G8 `gh attestation verify` succeeds against every artifact
@@ -42,25 +42,34 @@ env:
   ARTIFACT_ALLOWLIST: "avar LICENSE NOTICE README.md"
 
 jobs:
-  # ------------------------------------------------------------------
-  # Native binary builds. One job per (runner, arch). Cross-compile
-  # is not permitted: each artifact must be validated on its native
-  # architecture.
-  # ------------------------------------------------------------------
   binary:
     strategy:
       fail-fast: true
       matrix:
         include:
           - runner: macos-15
+            os: macos
             target: bun-darwin-arm64
             artifact: darwin-arm64
             expected_uname: arm64
             startup_budget_ms: 500
           - runner: macos-15-intel
+            os: macos
             target: bun-darwin-x64
             artifact: darwin-x64
             expected_uname: x86_64
+            startup_budget_ms: 800
+          - runner: ubuntu-latest
+            os: linux
+            target: bun-linux-x64
+            artifact: linux-x64
+            expected_uname: x86_64
+            startup_budget_ms: 800
+          - runner: ubuntu-24.04-arm
+            os: linux
+            target: bun-linux-arm64
+            artifact: linux-arm64
+            expected_uname: aarch64
             startup_budget_ms: 800
     runs-on: ${{ matrix.runner }}
     steps:
@@ -116,23 +125,34 @@ jobs:
         run: |
           set -euo pipefail
           bash conformance/scripts/run-suite.sh ./avar
-        # run-suite.sh iterates every vector, invokes ./avar verify,
-        # and asserts the documented exit code per vector manifest.
 
       # ---- G4: no undeclared network ----
-      - name: G4 network isolation
+      - name: G4 network isolation (macos)
+        if: matrix.os == 'macos'
         run: |
           set -euo pipefail
-          # Pick a known-valid vector; verify must succeed with egress blocked.
           VEC=$(find conformance/vectors -name '*.json' | head -1)
-          # macOS: use pfctl-scoped run via sudo unavailable in hosted runners;
-          # emulate by unsetting proxy and asserting no outbound sockets via
-          # /usr/sbin/lsof sampling.
           ./avar verify "$VEC" >/tmp/verify.out &
           PID=$!
           sleep 0.05
-          # Sample: any ESTABLISHED / SYN_SENT owned by our pid is a failure.
           if /usr/sbin/lsof -a -p "$PID" -i -nP 2>/dev/null | \
+               grep -E 'ESTABLISHED|SYN_SENT' ; then
+            echo "G4 FAIL: verifier opened a network connection"
+            kill "$PID" 2>/dev/null || true
+            exit 1
+          fi
+          wait "$PID"
+
+      - name: G4 network isolation (linux)
+        if: matrix.os == 'linux'
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq && sudo apt-get install -y -qq lsof
+          VEC=$(find conformance/vectors -name '*.json' | head -1)
+          ./avar verify "$VEC" >/tmp/verify.out &
+          PID=$!
+          sleep 0.05
+          if lsof -a -p "$PID" -i -nP 2>/dev/null | \
                grep -E 'ESTABLISHED|SYN_SENT' ; then
             echo "G4 FAIL: verifier opened a network connection"
             kill "$PID" 2>/dev/null || true
@@ -145,15 +165,9 @@ jobs:
         run: |
           set -euo pipefail
           VEC=$(find conformance/vectors -name '*.json' | head -1)
-          # 3 warm runs to smooth out disk cache jitter; report min.
           MIN=999999
           for i in 1 2 3; do
-            T=$( { /usr/bin/time -l ./avar verify "$VEC" >/dev/null; } 2>&1 \
-                 | awk '/real/ {print int($1*1000)}' )
-            if [ -z "$T" ]; then
-              # macOS `time -l` prints "real 0.42" differently; fall back.
-              T=$(python3 -c "import time,subprocess; s=time.time(); subprocess.run(['./avar','verify','$VEC'],stdout=subprocess.DEVNULL); print(int((time.time()-s)*1000))")
-            fi
+            T=$(python3 -c "import time,subprocess; s=time.time(); subprocess.run(['./avar','verify','$VEC'],stdout=subprocess.DEVNULL); print(int((time.time()-s)*1000))")
             [ "$T" -lt "$MIN" ] && MIN=$T
           done
           echo "min startup+verify: ${MIN}ms (budget ${{ matrix.startup_budget_ms }}ms)"
@@ -167,14 +181,14 @@ jobs:
           STAGE="avar-v${{ steps.ver.outputs.version }}-${{ matrix.artifact }}"
           mkdir "$STAGE"
           cp avar LICENSE NOTICE README.md "$STAGE/"
-          # Assert nothing else snuck in.
           ACTUAL=$(cd "$STAGE" && ls -1 | sort | tr '\n' ' ')
           EXPECTED=$(echo "$ARTIFACT_ALLOWLIST" | tr ' ' '\n' | sort | tr '\n' ' ')
           echo "archive contents: $ACTUAL"
           echo "expected        : $EXPECTED"
           test "$ACTUAL" = "$EXPECTED"
           tar -czf "$STAGE.tar.gz" "$STAGE"
-          shasum -a 256 "$STAGE.tar.gz" > "$STAGE.tar.gz.sha256"
+          shasum -a 256 "$STAGE.tar.gz" > "$STAGE.tar.gz.sha256" 2>/dev/null || \
+            sha256sum "$STAGE.tar.gz" > "$STAGE.tar.gz.sha256"
           echo "archive=$STAGE.tar.gz" >> "$GITHUB_OUTPUT"
 
       - name: Upload artifact
@@ -186,11 +200,6 @@ jobs:
             ${{ steps.pkg.outputs.archive }}.sha256
           if-no-files-found: error
 
-  # ------------------------------------------------------------------
-  # Readable source bundle. Not a compiled binary — an inspectable
-  # JS bundle + launcher + lockfile + build metadata, so reviewers
-  # can audit what the compiled binaries were built from.
-  # ------------------------------------------------------------------
   source-bundle:
     runs-on: ubuntu-latest
     steps:
@@ -223,13 +232,11 @@ jobs:
           mkdir "$STAGE"
           cp avar.bundle.js LICENSE NOTICE README.md CLEAN-ROOM.md "$STAGE/"
           cp package.json package-lock.json "$STAGE/" 2>/dev/null || true
-          # Node launcher for the readable bundle.
           cat > "$STAGE/avar" <<'LAUNCH'
           #!/usr/bin/env node
           import(new URL("./avar.bundle.js", import.meta.url));
           LAUNCH
           chmod +x "$STAGE/avar"
-          # Build metadata.
           cat > "$STAGE/build-metadata.json" <<META
           {
             "artifact_kind": "source-bundle",
@@ -244,7 +251,7 @@ jobs:
           }
           META
           tar -czf "$STAGE.tar.gz" "$STAGE"
-          shasum -a 256 "$STAGE.tar.gz" > "$STAGE.tar.gz.sha256"
+          sha256sum "$STAGE.tar.gz" > "$STAGE.tar.gz.sha256"
           echo "archive=$STAGE.tar.gz" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:
@@ -253,10 +260,6 @@ jobs:
             ${{ steps.pkg.outputs.archive }}
             ${{ steps.pkg.outputs.archive }}.sha256
 
-  # ------------------------------------------------------------------
-  # Collect, attest, publish. Every distributable gets its own
-  # attestation entry via subject-path.
-  # ------------------------------------------------------------------
   release:
     needs: [binary, source-bundle]
     runs-on: ubuntu-latest
@@ -280,7 +283,7 @@ jobs:
           set -euo pipefail
           rm -f SHA256SUMS
           for f in *.tar.gz; do
-            shasum -a 256 "$f" >> SHA256SUMS
+            sha256sum "$f" >> SHA256SUMS
           done
           cat SHA256SUMS
 
@@ -292,6 +295,7 @@ jobs:
           python3 <<'PY'
           import hashlib, json, os, pathlib
           version = os.environ["VERSION"]
+          PLATFORMS = ["darwin-arm64", "darwin-x64", "linux-x64", "linux-arm64", "source-bundle"]
           out = {
               "version": version,
               "source_commit": os.environ["GITHUB_SHA"],
@@ -301,9 +305,7 @@ jobs:
           }
           for p in sorted(pathlib.Path(".").glob("*.tar.gz")):
               b = p.read_bytes()
-              plat = "source-bundle" if "source-bundle" in p.name else (
-                  "darwin-arm64" if "darwin-arm64" in p.name else "darwin-x64"
-              )
+              plat = next((x for x in PLATFORMS if x in p.name), "unknown")
               out["artifacts"].append({
                   "name": p.name,
                   "platform": plat,
@@ -317,7 +319,6 @@ jobs:
           print(json.dumps(out, indent=2))
           PY
 
-      # G8: attest EVERY distributable individually.
       - name: Attest all distributables
         uses: actions/attest-build-provenance@v2
         with:
@@ -355,15 +356,10 @@ jobs:
 
                 gh attestation verify <file> --repo Aarmatix/avar
 
-            See `release-manifest.json` for per-artifact SHA256, platform,
-            and verification command. This release is provenance-attested;
-            it is not yet claimed to be reproducible.
+            Platforms: darwin-arm64, darwin-x64, linux-x64, linux-arm64,
+            plus a readable source bundle. See `release-manifest.json` for
+            per-artifact SHA256, platform, and verification command.
 
-  # ------------------------------------------------------------------
-  # Auto-open a formula-update PR against Aarmatix/homebrew-tap.
-  # Requires a repo secret HOMEBREW_TAP_PUSH_TOKEN with contents:write
-  # + pull-requests:write on Aarmatix/homebrew-tap.
-  # ------------------------------------------------------------------
   tap-pr:
     needs: release
     if: ${{ github.event_name == 'push' }}
@@ -379,8 +375,10 @@ jobs:
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
           set -euo pipefail
-          ARM=$(shasum -a 256 "dist/avar-v${VERSION}-darwin-arm64.tar.gz" | awk '{print $1}')
-          X64=$(shasum -a 256 "dist/avar-v${VERSION}-darwin-x64.tar.gz" | awk '{print $1}')
+          DARM=$(sha256sum "dist/avar-v${VERSION}-darwin-arm64.tar.gz" | awk '{print $1}')
+          DX64=$(sha256sum "dist/avar-v${VERSION}-darwin-x64.tar.gz" | awk '{print $1}')
+          LARM=$(sha256sum "dist/avar-v${VERSION}-linux-arm64.tar.gz" | awk '{print $1}')
+          LX64=$(sha256sum "dist/avar-v${VERSION}-linux-x64.tar.gz" | awk '{print $1}')
           git clone "https://x-access-token:${GH_TOKEN}@github.com/Aarmatix/homebrew-tap.git" tap
           cd tap
           git config user.name  "aarmos-release-bot"
@@ -398,11 +396,22 @@ jobs:
             on_macos do
               on_arm do
                 url "https://github.com/Aarmatix/avar/releases/download/v${VERSION}/avar-v${VERSION}-darwin-arm64.tar.gz"
-                sha256 "${ARM}"
+                sha256 "${DARM}"
               end
               on_intel do
                 url "https://github.com/Aarmatix/avar/releases/download/v${VERSION}/avar-v${VERSION}-darwin-x64.tar.gz"
-                sha256 "${X64}"
+                sha256 "${DX64}"
+              end
+            end
+
+            on_linux do
+              on_arm do
+                url "https://github.com/Aarmatix/avar/releases/download/v${VERSION}/avar-v${VERSION}-linux-arm64.tar.gz"
+                sha256 "${LARM}"
+              end
+              on_intel do
+                url "https://github.com/Aarmatix/avar/releases/download/v${VERSION}/avar-v${VERSION}-linux-x64.tar.gz"
+                sha256 "${LX64}"
               end
             end
 
@@ -422,4 +431,4 @@ jobs:
           gh pr create \
             --repo Aarmatix/homebrew-tap \
             --title "avar ${VERSION}" \
-            --body "Automated update from Aarmatix/avar release v${VERSION}. Provenance attestations attached to the upstream release; verify with \`gh attestation verify\`."
+            --body "Automated update from Aarmatix/avar release v${VERSION}. Provenance attestations attached; verify with \`gh attestation verify\`. Now covers darwin-arm64/x64 and linux-arm64/x64."
