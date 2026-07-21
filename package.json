@@ -1,7 +1,8 @@
 {
   "name": "@avar/reference-verifier",
   "version": "0.1.0",
-  "description": "Clean-room reference implementation of the AVAR verifier. Normative behavior; not performance-optimized.",
+  "private": true,
+  "description": "Clean-room reference implementation of the AVAR verifier. Distributed via GitHub Releases + Homebrew (not npm).",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
