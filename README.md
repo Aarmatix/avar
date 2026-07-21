@@ -1,60 +1,48 @@
 # AVAR Reference Verifier
 
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+Clean-room reference implementation of the [AVAR specification](https://github.com/Aarmatix/avar-spec).
 
-The **reference implementation** of the AVAR standard verifier. Correctness
-over performance. Written clean-room from
-[avar-spec](https://github.com/Aarmatix/avar-spec) — no shared code lineage
-with any commercial verifier.
+**Purpose.** Establish an independent, permissively licensed verifier so that
+any producer of AVAR receipts can be checked against the standard rather than
+against a single commercial implementation.
 
-## What This Is
-
-A minimal, spec-faithful verifier for AVAR receipts. Its job is to be the
-**authoritative correctness reference** — if a receipt verifies here, it is
-AVAR-compliant. If it fails here, it is not.
-
-## What This Is NOT
-
-- ❌ A high-performance verifier (see commercial implementations)
-- ❌ A policy engine (AVAR standardizes receipts, not policies)
-- ❌ A receipt producer (see RFC-0009 §2 for producer requirements)
-- ❌ A SIEM/observability tool
+**Non-goals.** This verifier is normative, not fast. It does not implement
+policy evaluation, ASP grammar, or any runtime concerns beyond receipt
+verification per RFC-0008 and RFC-0009.
 
 ## Install
 
 ```bash
-# TBD after first release
+npm install @avar/reference-verifier
 ```
 
-## Usage
+## Use as a library
+
+```ts
+import { verifyReceipt } from "@avar/reference-verifier";
+
+const result = await verifyReceipt(receipt);
+// { valid, legacy, warnings, producer, spec_version }
+```
+
+## Use as a CLI
 
 ```bash
-avar-verify receipt.json
-avar-verify --key public.pem receipt.json
-avar-verify --spec-version 1.10 receipt.json
+npx avar-ref verify path/to/receipt.json
 ```
 
-Exit codes:
-- `0` — receipt verified
-- `1` — receipt rejected (see stderr for error code)
-- `2` — usage error
-
-## Supported AVAR Versions
-
-- 1.10 (current)
-- 1.0–1.9 (legacy mode; see RFC-0008 §7)
+Exit codes: `0` valid, `1` rejected with an AVAR error code, `2` usage error.
 
 ## Conformance
 
-This verifier passes every test in
-[Aarmatix/avar-conformance](https://github.com/Aarmatix/avar-conformance) at
-the `verifier/` tier. CI enforces this on every PR.
+Every commit runs against [Aarmatix/avar-conformance](https://github.com/Aarmatix/avar-conformance).
+A third-party verifier is "AVAR 1.10 compliant" iff it passes the same suite.
 
-## Contributing
+## Clean-room rule
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Bugs against spec behavior are
-fixed here; spec changes go through RFCs in `avar-spec`.
+See [CLEAN-ROOM.md](./CLEAN-ROOM.md). This repository does not include or
+adapt code from any commercial AVAR verifier.
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+Apache-2.0. See [LICENSE](./LICENSE).

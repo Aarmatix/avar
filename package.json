@@ -1,0 +1,29 @@
+{
+  "name": "@avar/reference-verifier",
+  "version": "0.1.0",
+  "description": "Clean-room reference implementation of the AVAR verifier. Normative behavior; not performance-optimized.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "avar-ref": "./bin/avar-ref.mjs"
+  },
+  "files": ["dist", "bin", "src", "README.md", "CLEAN-ROOM.md", "LICENSE"],
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test --experimental-strip-types test/*.test.ts",
+    "lint:vocab": "node ci/check-avar-vocabulary.mjs",
+    "lint:no-aarmos": "node ci/no-aarmos-imports.mjs"
+  },
+  "engines": { "node": ">=20" },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aarmatix/avar.git"
+  },
+  "homepage": "https://github.com/Aarmatix/avar-spec"
+}
