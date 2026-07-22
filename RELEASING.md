@@ -3,7 +3,7 @@
 This repository ships the independent AVAR reference verifier as:
 1. A source tarball on the GitHub release
 2. Standalone `avar` binaries (see **Release matrix** below)
-3. A Homebrew formula update in [`Aarmatix/homebrew-tap`](https://github.com/Aarmatix/homebrew-tap) — **macOS only**
+3. A Homebrew formula update in [`Aarmatix/homebrew-tap`](https://github.com/Aarmatix/homebrew-tap) — supported on **macOS and Linux** (see support definition below)
 
 ## Release matrix
 
@@ -14,7 +14,7 @@ retroactively appear in a prior release.
 | Version | macOS arm64 | macOS x64 | Linux arm64 | Linux x64 | Homebrew (macOS) | Homebrew (Linuxbrew) |
 | ------- | ----------- | --------- | ----------- | --------- | ---------------- | -------------------- |
 | v0.1.0  | ✅          | ✅        | —           | —         | ✅               | —                    |
-| v0.1.1  | ✅          | ✅        | ✅          | ✅        | ✅               | not enabled (direct download only) |
+| v0.1.1  | ✅          | ✅        | ✅          | ✅        | ✅               | ✅ (linux-arm64, linux-x64) |
 
 Linux artifacts on v0.1.1 must pass the same gates as Darwin: native or
 appropriately validated build, full conformance suite against the compiled
@@ -22,15 +22,37 @@ executable, stable CLI exit codes, no undeclared network access, versioned
 tarballs, SHA256 entries in `SHA256SUMS`, individual build-provenance
 attestations, and an updated `release-manifest.json`.
 
-Linux binaries ship via GitHub Releases only. Linuxbrew support is a
-separate, later decision — the presence of a Linux binary does **not**
-imply that `brew install aarmatix/tap/avar` is supported on Linux.
+### Homebrew support contract
+
+Homebrew is supported on macOS and Linux for the platforms listed in the
+release matrix. Direct release downloads remain available for all supported
+platforms.
+
+To keep "supported" honest, we distinguish three states:
+
+- **Available** — a platform tarball is published on the GitHub release.
+- **Supported (Homebrew)** — the tap formula installs successfully in CI
+  for that platform, `avar --version` matches the formula version, a valid
+  RFC-0008 conformance vector exits `0`, an invalid vector exits `1`, and
+  `brew test avar` passes. Linuxbrew support is gated on the
+  [`linuxbrew-smoke`](https://github.com/Aarmatix/homebrew-tap/actions/workflows/linuxbrew-smoke.yml)
+  workflow in `Aarmatix/homebrew-tap` staying green on both `linux-x64`
+  and `linux-arm64`. A weekly cron re-validates so upstream Linuxbrew
+  drift can't silently invalidate the claim.
+- **Best effort / unsupported** — untested distributions (e.g. Alpine/musl)
+  or architectures not in the matrix. Users may attempt direct download,
+  but no CI backs it.
+
+If `linuxbrew-smoke` goes red on either architecture, downgrade this row
+to "direct download only" until the formula is fixed — don't leave the
+formula's `on_linux` blocks claiming support the CI no longer proves.
 
 ## Release flow
 
 - Tag a version: `git tag vX.Y.Z && git push --tags`
-- The `release.yml` workflow runs gates G1–G8, publishes the release, and pushes an updated `avar.rb` PR to the Homebrew tap (Darwin bottles only until Linuxbrew is enabled).
+- The `release.yml` workflow runs gates G1–G8, publishes the release, and pushes an updated `avar.rb` PR to the Homebrew tap. The tap's `linuxbrew-smoke` workflow then re-validates the Linux blocks against the new release before merge.
 - To rehearse without publishing, run the workflow with `workflow_dispatch` and `dry_run=true`.
+
 
 ## Secrets
 
