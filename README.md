@@ -17,9 +17,20 @@ standalone binary** via GitHub Releases and Homebrew — **not npm**.
 
 ```bash
 brew install aarmatix/tap/avar
-# or download from https://github.com/Aarmatix/avar/releases
+# or download a platform tarball from https://github.com/Aarmatix/avar/releases
 avar verify path/to/receipt.json
 ```
+
+### Supported platforms
+
+Prebuilt verifier binaries are currently available for **macOS (arm64, x64)**
+beginning with **v0.1.0**. **Linux (arm64, x64)** binaries will be published
+beginning with **v0.1.1** as direct GitHub Release downloads.
+
+Homebrew (`brew install aarmatix/tap/avar`) is currently supported on macOS
+only. Linuxbrew support is a separate decision and will not be enabled
+automatically when Linux release artifacts start shipping — see
+[RELEASING.md](./RELEASING.md).
 
 The `package.json` in this repository is an **internal build unit only**
 (`private: true`) and is intentionally not published to npm. Public npm
