@@ -2,13 +2,34 @@
 
 This repository ships the independent AVAR reference verifier as:
 1. A source tarball on the GitHub release
-2. Standalone `avar` binaries for macOS (arm64, x64)
-3. A Homebrew formula update in [`Aarmatix/homebrew-tap`](https://github.com/Aarmatix/homebrew-tap)
+2. Standalone `avar` binaries (see **Release matrix** below)
+3. A Homebrew formula update in [`Aarmatix/homebrew-tap`](https://github.com/Aarmatix/homebrew-tap) — **macOS only**
+
+## Release matrix
+
+Release semantics are versioned. Once a release is cut, its asset list is
+immutable — new platforms land in a new patch version, they do **not**
+retroactively appear in a prior release.
+
+| Version | macOS arm64 | macOS x64 | Linux arm64 | Linux x64 | Homebrew (macOS) | Homebrew (Linuxbrew) |
+| ------- | ----------- | --------- | ----------- | --------- | ---------------- | -------------------- |
+| v0.1.0  | ✅          | ✅        | —           | —         | ✅               | —                    |
+| v0.1.1  | ✅          | ✅        | ✅          | ✅        | ✅               | not enabled (direct download only) |
+
+Linux artifacts on v0.1.1 must pass the same gates as Darwin: native or
+appropriately validated build, full conformance suite against the compiled
+executable, stable CLI exit codes, no undeclared network access, versioned
+tarballs, SHA256 entries in `SHA256SUMS`, individual build-provenance
+attestations, and an updated `release-manifest.json`.
+
+Linux binaries ship via GitHub Releases only. Linuxbrew support is a
+separate, later decision — the presence of a Linux binary does **not**
+imply that `brew install aarmatix/tap/avar` is supported on Linux.
 
 ## Release flow
 
 - Tag a version: `git tag vX.Y.Z && git push --tags`
-- The `release.yml` workflow runs gates G1–G8, publishes the release, and pushes an updated `avar.rb` PR to the Homebrew tap.
+- The `release.yml` workflow runs gates G1–G8, publishes the release, and pushes an updated `avar.rb` PR to the Homebrew tap (Darwin bottles only until Linuxbrew is enabled).
 - To rehearse without publishing, run the workflow with `workflow_dispatch` and `dry_run=true`.
 
 ## Secrets
