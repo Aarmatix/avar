@@ -38,17 +38,25 @@ imply that `brew install aarmatix/tap/avar` is supported on Linux.
 
 Fine-grained GitHub PAT used by the `tap-pr` job to push the formula update to `Aarmatix/homebrew-tap`.
 
-- **Scope:** `contents:write` on `Aarmatix/homebrew-tap`
+- **Scope:** `contents:write` and `pull_requests:write` on `Aarmatix/homebrew-tap`
 - **Type:** Fine-grained PAT (never a classic broad-scope token)
+- **Location:** Organization secret on the **`Aarmatix`** GitHub organization, accessible to `Aarmatix/avar`
 - **Current expiry:** **2027-07-21**
 - **Rotation reminder:** 2027-07-14 (one week before expiry)
+
+This token was rotated from the previous `Aarmatix-dev` personal-account secret into the `Aarmatix` organization so that repository transfers and org ownership changes do not break the automated tap workflow.
 
 Without this secret, the `tap-pr` job fails and the formula must be updated by hand (see [`Aarmatix/homebrew-tap#1`](https://github.com/Aarmatix/homebrew-tap/pull/1) for the manual template).
 
 ### Rotation procedure
 
-1. Create a new fine-grained PAT with the scope above and a 1-year expiry.
-2. Update the `HOMEBREW_TAP_PUSH_TOKEN` secret in **Settings → Secrets and variables → Actions**.
-3. Trigger a `workflow_dispatch` dry-run to confirm the workflow still authenticates (the `tap-pr` job is skipped on dry-runs, but the rest of the pipeline exercises the runner env).
-4. Update the **Current expiry** and **Rotation reminder** dates in this file.
-5. Revoke the old PAT.
+1. Create a new fine-grained PAT under an `Aarmatix` org-admin account with the scope above and a 1-year expiry.
+2. Update the `HOMEBREW_TAP_PUSH_TOKEN` organization secret in **Aarmatix organization settings → Secrets and variables → Actions**.
+3. Trigger a `workflow_dispatch` dry-run on `Aarmatix/avar` to confirm the workflow still authenticates (the `tap-pr` job is skipped on dry-runs, but the rest of the pipeline exercises the runner env).
+4. Verify token access with a manual test PR before the next release:
+   ```bash
+   GH_TOKEN=<new-token> gh repo view Aarmatix/homebrew-tap --json url
+   GH_TOKEN=<new-token> gh pr list --repo Aarmatix/homebrew-tap --limit 1
+   ```
+5. Update the **Current expiry** and **Rotation reminder** dates in this file.
+6. Revoke the old PAT.
