@@ -1,0 +1,10 @@
+AVAR Reference Verifier
+Copyright 2026 Aarmatix LLC and AVAR Reference Verifier contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+A copy of the License is included in this distribution as LICENSE.
+
+This product is a clean-room reference implementation of the AVAR
+specification (https://github.com/Aarmatix/avar-spec). It does not
+incorporate code from any commercial AVAR verifier.
