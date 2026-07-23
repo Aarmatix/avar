@@ -1,9 +1,10 @@
 #!/usr/bin/env bun
 // Standalone `avar` CLI entry. Compiled via `bun build --compile` for
-// Homebrew distribution. Identical behavior to bin/avar-ref.mjs but
-// imports source directly so bun can bundle without a prior tsc build.
+// Homebrew distribution. Imports the workspace `@avar-standard/core`
+// source directly so `bun --compile` bundles the exact same code
+// that ships to npm from packages/core.
 import { readFileSync } from "node:fs";
-import { verifyReceipt, VerifyError } from "../src/index.js";
+import { verifyReceipt, VerifyError } from "../packages/core/src/index.js";
 
 const argv = process.argv.slice(2);
 
