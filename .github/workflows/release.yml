@@ -294,7 +294,7 @@ jobs:
 
   release:
     needs: [parse, binary, source-bundle]
-    if: ${{needs.parse.outputs.kind=='binary'}}
+    if: ${{ needs.parse.outputs.is_binary == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -395,7 +395,7 @@ jobs:
 
   tap-pr:
     needs: [parse, release]
-    if: ${{ needs.parse.outputs.kind == 'binary' && github.event_name == 'push' }}
+    if: ${{ needs.parse.outputs.is_binary == 'true' && github.event_name == 'push' }}
     runs-on: ubuntu-latest
     steps:
       - id: ver
