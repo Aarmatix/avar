@@ -12,8 +12,9 @@ verification per RFC-0008 and RFC-0009.
 
 ## Distribution
 
-The AVAR reference verifier is distributed as a **provenance-attested
-standalone binary** via GitHub Releases and Homebrew — **not npm**.
+The AVAR reference verifier ships in two forms:
+
+**1. Standalone binary** — provenance-attested, via GitHub Releases and Homebrew.
 
 ```bash
 brew install aarmatix/tap/avar
@@ -21,35 +22,35 @@ brew install aarmatix/tap/avar
 avar verify path/to/receipt.json
 ```
 
+**2. Embeddable npm packages** — for applications that need to verify
+receipts inside their own runtime (Node 20+ / any WebCrypto-capable host):
+
+- [`@avar-standard/core`](https://www.npmjs.com/package/@avar-standard/core) — receipt types, parsing, canonicalization
+- [`@avar-standard/verify`](https://www.npmjs.com/package/@avar-standard/verify) — embeddable verification API
+
+Both are published from this repository with npm OIDC provenance and are
+Apache-2.0 licensed.
+
+### Browser / WASM
+
+A separate `@avar-standard/verify-wasm` package for browser and non-Node
+targets is **reserved but not yet published**. See
+[`docs/adr/0001-wasm-packaging.md`](./docs/adr/0001-wasm-packaging.md) for
+the decision to keep WASM out of `@avar-standard/verify` and ship it as its
+own package when browser demand is confirmed.
+
 ### Supported platforms
 
-Prebuilt verifier binaries are currently available for **macOS (arm64, x64)**
-beginning with **v0.1.0**. **Linux (arm64, x64)** binaries will be published
-beginning with **v0.1.1** as direct GitHub Release downloads.
-
-Homebrew (`brew install aarmatix/tap/avar`) is currently supported on macOS
-only. Linuxbrew support is a separate decision and will not be enabled
-automatically when Linux release artifacts start shipping — see
-[RELEASING.md](./RELEASING.md).
-
-The `package.json` in this repository is an **internal build unit only**
-(`private: true`) and is intentionally not published to npm. Public npm
-packages will be introduced later as the permanent embeddable SDK:
-
-- `@avar/core` — receipt types, parsing, canonicalization
-- `@avar/verify` — embeddable verification API
-- `@avar/wasm` — browser / non-Node target
-
-Homebrew answers "how do I verify a receipt?". npm will answer "how do I
-embed verification inside my application?" — those are different jobs and
-will ship on different timelines.
+Prebuilt verifier binaries are available for **macOS (arm64, x64)** and
+**Linux (arm64, x64)** beginning with **v0.1.1**. Homebrew
+(`brew install aarmatix/tap/avar`) is supported on both macOS and Linuxbrew.
 
 ## Build from source
 
 ```bash
 git clone https://github.com/Aarmatix/avar.git
-cd avar && npm install --package-lock=false && npm run build
-node bin/avar-ref.mjs verify path/to/receipt.json
+cd avar && npm install && npm run build
+node bin/avar.ts verify path/to/receipt.json
 ```
 
 Exit codes: `0` valid, `1` rejected with an AVAR error code, `2` usage error.

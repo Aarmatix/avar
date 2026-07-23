@@ -3,6 +3,9 @@
 // under @avar-standard/*. Forbids reintroducing deprecated @aarmos/*
 // package names or any legacy avar-core / avar-verify-wasm names in
 // this public repo.
+//
+// Also enforces ADR-0001: @avar-standard/verify MUST NOT export a
+// ./wasm subpath (WASM ships as its own reserved package).
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -45,6 +48,17 @@ for (const dir of readdirSync(PKG_DIR)) {
   }
   if (!/^@avar-standard\//.test(pj.name || "")) {
     problems.push(`packages/${dir}: "${pj.name}" must be scoped under @avar-standard/* (or set "private": true)`);
+  }
+
+  // ADR-0001: @avar-standard/verify must not expose a ./wasm subpath.
+  if (pj.name === "@avar-standard/verify" && pj.exports && typeof pj.exports === "object") {
+    for (const key of Object.keys(pj.exports)) {
+      if (key === "./wasm" || key.startsWith("./wasm.") || key.startsWith("./wasm/")) {
+        problems.push(
+          `packages/${dir}: @avar-standard/verify exports "${key}" — forbidden by ADR-0001 (WASM ships as @avar-standard/verify-wasm)`,
+        );
+      }
+    }
   }
 }
 
