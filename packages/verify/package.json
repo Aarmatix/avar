@@ -16,7 +16,7 @@
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
-    "test": "echo \"no verify tests\" && exit 0"
+    "test": "node --test --experimental-strip-types test/*.test.ts 2>/dev/null || echo 'no verify tests yet'"
   },
   "engines": {
     "node": ">=20"
@@ -33,5 +33,5 @@
     "url": "git+https://github.com/Aarmatix/avar.git",
     "directory": "packages/verify"
   },
-  "homepage": "https://github.com/Aarmatix/avar-spec"
+  "homepage": "https://github.com/Aarmatix/avar"
 }

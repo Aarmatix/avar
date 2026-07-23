@@ -16,7 +16,7 @@
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
-    "test": "echo \"tests skipped in v0.1.0 publish; run manually via node --test after build\" && exit 0"
+    "test": "node --test --experimental-strip-types test/*.test.ts"
   },
   "engines": {
     "node": ">=20"
@@ -30,5 +30,5 @@
     "url": "git+https://github.com/Aarmatix/avar.git",
     "directory": "packages/core"
   },
-  "homepage": "https://github.com/Aarmatix/avar-spec"
+  "homepage": "https://github.com/Aarmatix/avar"
 }
