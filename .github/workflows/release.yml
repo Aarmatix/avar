@@ -45,7 +45,34 @@ env:
   ARTIFACT_ALLOWLIST: "avar LICENSE NOTICE README.md"
 
 jobs:
+  parse:
+    runs-on: ubuntu-latest
+    outputs:
+      is_binary: ${{ steps.p.outputs.is_binary }}
+      is_pkg: ${{ steps.p.outputs.is_pkg }}
+      pkg_dir: ${{ steps.p.outputs.pkg_dir }}
+    steps:
+      - id: p
+        run: |
+          REF="${GITHUB_REF#refs/tags/}"
+          if [[ "$REF" == v* ]]; then
+            echo "is_binary=true" >> "$GITHUB_OUTPUT"
+            echo "is_pkg=false"   >> "$GITHUB_OUTPUT"
+          elif [[ "$REF" == @avar-standard/core@* ]]; then
+            echo "is_binary=false" >> "$GITHUB_OUTPUT"
+            echo "is_pkg=true"     >> "$GITHUB_OUTPUT"
+            echo "pkg_dir=core"    >> "$GITHUB_OUTPUT"
+          elif [[ "$REF" == @avar-standard/verify@* ]]; then
+            echo "is_binary=false" >> "$GITHUB_OUTPUT"
+            echo "is_pkg=true"     >> "$GITHUB_OUTPUT"
+            echo "pkg_dir=verify"  >> "$GITHUB_OUTPUT"
+          else
+            echo "is_binary=false" >> "$GITHUB_OUTPUT"
+            echo "is_pkg=false"    >> "$GITHUB_OUTPUT"
+          fi
   binary:
+    needs: parse
+    if: needs.parse.outputs.is_binary == 'true'
     strategy:
       fail-fast: true
       matrix:
@@ -204,6 +231,8 @@ jobs:
           if-no-files-found: error
 
   source-bundle:
+    needs: parse
+    if: needs.parse.outputs.is_binary == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -264,7 +293,8 @@ jobs:
             ${{ steps.pkg.outputs.archive }}.sha256
 
   release:
-    needs: [binary, source-bundle]
+    needs: [parse, binary, source-bundle]
+    if: ${{needs.parse.outputs.kind=='binary'}}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -364,8 +394,8 @@ jobs:
             per-artifact SHA256, platform, and verification command.
 
   tap-pr:
-    needs: release
-    if: ${{ github.event_name == 'push' }}
+    needs: [parse, release]
+    if: ${{ needs.parse.outputs.kind == 'binary' && github.event_name == 'push' }}
     runs-on: ubuntu-latest
     steps:
       - id: ver
@@ -435,3 +465,23 @@ jobs:
             --repo Aarmatix/homebrew-tap \
             --title "avar ${VERSION}" \
             --body "Automated update from Aarmatix/avar release v${VERSION}. Provenance attestations attached; verify with \`gh attestation verify\`. Now covers darwin-arm64/x64 and linux-arm64/x64."
+  npm-publish:
+    needs: parse
+    if: needs.parse.outputs.is_pkg == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # npm provenance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      - run: npm install --no-audit --no-fund --package-lock=false
+      - run: npm run build --workspace packages/${{ needs.parse.outputs.pkg_dir }}
+      - run: npm test    --workspace packages/${{ needs.parse.outputs.pkg_dir }}
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AVAR_STANDARD_TOKEN }}
+        run: npm publish --workspace packages/${{ needs.parse.outputs.pkg_dir }} --provenance --access public
