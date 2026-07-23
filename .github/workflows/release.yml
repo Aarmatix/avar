@@ -25,7 +25,10 @@ name: release
 
 on:
   push:
-    tags: ["v*"]
+    tags:
+      - "v*"
+      - "@avar-standard/core@*"
+      - "@avar-standard/verify@*"
   workflow_dispatch:
     inputs:
       dry_run:
