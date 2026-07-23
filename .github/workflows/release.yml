@@ -479,8 +479,13 @@ jobs:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
       - run: npm install --no-audit --no-fund --package-lock=false
-      - run: npm run build --workspace packages/${{ needs.parse.outputs.pkg_dir }}
-      - run: npm test    --workspace packages/${{ needs.parse.outputs.pkg_dir }}
+      # In a workspace monorepo, build the core package first so dependent
+      # packages can resolve its type declarations and compiled output.
+      - name: Build core workspace
+        run: npm run build --workspace packages/core
+      - name: Build target workspace
+        run: npm run build --workspace packages/${{ needs.parse.outputs.pkg_dir }}
+      - run: npm test --workspace packages/${{ needs.parse.outputs.pkg_dir }}
       - name: Publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AVAR_STANDARD_TOKEN }}
