@@ -371,12 +371,50 @@ jobs:
             gh attestation verify "$f" --repo "${GITHUB_REPOSITORY}"
           done
 
+      # ---- Sigstore/cosign keyless signatures ----
+      # Complements the GitHub build-provenance attestation above so
+      # verifiers outside the GitHub CLI ecosystem (cosign / policy-controller
+      # / Kyverno / other Sigstore-aware tooling) can validate every
+      # distributable against Sigstore's public transparency log.
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: "v2.4.1"
+
+      - name: Sign artifacts with cosign (keyless, OIDC)
+        working-directory: dist
+        env:
+          COSIGN_YES: "true"
+        run: |
+          set -euo pipefail
+          for f in *.tar.gz SHA256SUMS release-manifest.json; do
+            echo "== cosign sign: $f =="
+            cosign sign-blob "$f" \
+              --bundle "${f}.cosign.bundle" \
+              --yes
+          done
+          ls -la *.cosign.bundle
+
+      - name: Verify cosign bundles locally
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          IDENTITY="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@${GITHUB_REF}"
+          for f in *.tar.gz SHA256SUMS release-manifest.json; do
+            echo "== cosign verify: $f =="
+            cosign verify-blob "$f" \
+              --bundle "${f}.cosign.bundle" \
+              --certificate-identity "$IDENTITY" \
+              --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+          done
+
       - name: Publish GitHub Release
         if: ${{ github.event_name == 'push' || inputs.dry_run == false }}
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/*.tar.gz
+            dist/*.cosign.bundle
             dist/SHA256SUMS
             dist/release-manifest.json
           generate_release_notes: true
@@ -384,14 +422,23 @@ jobs:
           body: |
             AVAR reference verifier ${{ steps.ver.outputs.version }}.
 
-            Every artifact in this release is covered by an individual
-            GitHub build-provenance attestation. Verify with:
+            Three independent verification paths for every artifact:
 
-                gh attestation verify <file> --repo Aarmatix/avar
+              1. `sha256sum -c SHA256SUMS`
+              2. GitHub build-provenance:
+                 `gh attestation verify <file> --repo Aarmatix/avar`
+              3. Sigstore keyless (cosign):
+                 `cosign verify-blob <file> --bundle <file>.cosign.bundle \
+                    --certificate-identity-regexp 'https://github.com/Aarmatix/avar/\.github/workflows/release\.yml@.*' \
+                    --certificate-oidc-issuer https://token.actions.githubusercontent.com`
+
+            Full instructions: https://www.aarmos.io/docs/verify-binary
 
             Platforms: darwin-arm64, darwin-x64, linux-x64, linux-arm64,
             plus a readable source bundle. See `release-manifest.json` for
-            per-artifact SHA256, platform, and verification command.
+            per-artifact SHA256, platform, and verification commands.
+
+
 
   tap-pr:
     needs: [parse, release]
@@ -490,3 +537,4 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AVAR_STANDARD_TOKEN }}
         run: npm publish --workspace packages/${{ needs.parse.outputs.pkg_dir }} --provenance --access public
+
