@@ -1,14 +1,18 @@
 {
   "name": "valid receipt, empty prev",
   "kind": "receipt",
-  "publicKey": "REPLACE_WITH_HEX_PUBKEY_FROM_FIXTURE_GENERATOR",
+  "publicKey": "46d97aa78f345fe42dc09ccea9c28024bee47d5b3c9e4e914e8818426cdfc258",
   "input": {
     "v": 1,
     "id": "00000000-0000-4000-8000-000000000001",
     "ts": "2026-01-01T00:00:00.000Z",
     "prev": null,
-    "payload": { "action": "noop" },
-    "sig": "REPLACE_WITH_HEX_SIG_FROM_FIXTURE_GENERATOR"
+    "payload": {
+      "action": "noop"
+    },
+    "sig": "1273391e26fb9272313a335bb2e77ae630716ee5e71b5d301fa58ff895f28f046a10694620f65bcd5b23124e80b916ddc48ff7f2a8d4e24071dc934964984f00"
   },
-  "expect": { "ok": true }
+  "expect": {
+    "ok": true
+  }
 }

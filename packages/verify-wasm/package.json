@@ -26,7 +26,7 @@
     "test:parity": "node test/parity.test.mjs",
     "test:surface": "node ../../scripts/check-wasm-surface.mjs dist/verify.wasm",
     "test:strings": "node ../../scripts/check-wasm-strings.mjs dist/verify.wasm",
-    "prepublishOnly": "npm run build && npm run test:surface && npm run test:strings"
+    "prepublishOnly": "npm run build && npm run test:surface && npm run test:strings && npm run test:parity"
   },
   "dependencies": {
     "@noble/hashes": "^1.4.0",

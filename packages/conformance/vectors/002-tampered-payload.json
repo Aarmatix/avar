@@ -1,14 +1,19 @@
 {
   "name": "tampered payload after signing",
   "kind": "receipt",
-  "publicKey": "REPLACE_WITH_HEX_PUBKEY_FROM_FIXTURE_GENERATOR",
+  "publicKey": "46d97aa78f345fe42dc09ccea9c28024bee47d5b3c9e4e914e8818426cdfc258",
   "input": {
     "v": 1,
     "id": "00000000-0000-4000-8000-000000000002",
     "ts": "2026-01-01T00:00:00.000Z",
     "prev": null,
-    "payload": { "action": "TAMPERED" },
-    "sig": "REPLACE_WITH_HEX_SIG_FROM_FIXTURE_GENERATOR"
+    "payload": {
+      "action": "TAMPERED"
+    },
+    "sig": "9212dc4c5ec38e1642c4a0765f7661c7863dd9be029a4d42546f428a7cd67eb4a3455b6fb610d659de6beba315e00754bb9f6784c79b0a2d9a591e88fe4e2700"
   },
-  "expect": { "ok": false, "reason": "signature-mismatch" }
+  "expect": {
+    "ok": false,
+    "reason": "signature-mismatch"
+  }
 }
