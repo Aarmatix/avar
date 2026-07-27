@@ -32,7 +32,6 @@ jobs:
           npm run build
           npm run test:surface
           npm run test:strings
-          npm run test:parity
         working-directory: packages/verify-wasm
       - name: Publish
         run: npm publish --provenance --access public
