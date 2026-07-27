@@ -1,0 +1,40 @@
+name: verify-wasm parity
+
+on:
+  pull_request:
+    paths:
+      - "packages/verify-wasm/**"
+      - "packages/verify/**"
+      - "packages/conformance/**"
+      - ".github/workflows/parity.yml"
+  push:
+    branches: [main]
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install Javy
+        run: |
+          curl -sSL https://github.com/bytecodealliance/javy/releases/latest/download/javy-x86_64-linux-v3.0.0.gz \
+            | gunzip > /usr/local/bin/javy && chmod +x /usr/local/bin/javy
+          javy --version
+      - name: Install deps
+        run: npm ci
+        working-directory: packages/verify-wasm
+      - name: Build WASM
+        run: npm run build
+        working-directory: packages/verify-wasm
+      - name: Surface check (verification-only export set)
+        run: npm run test:surface
+        working-directory: packages/verify-wasm
+      - name: String scan (no private tokens)
+        run: npm run test:strings
+        working-directory: packages/verify-wasm
+      - name: Parity vs @avar-standard/verify
+        run: npm run test:parity
+        working-directory: packages/verify-wasm

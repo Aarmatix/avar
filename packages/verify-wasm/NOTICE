@@ -1,0 +1,11 @@
+@avar-standard/verify-wasm — Portable WebAssembly conformance implementation
+of the AVAR verifier.
+Copyright 2026 Aarmatix LLC
+
+Licensed under the Apache License, Version 2.0 (the "License").
+You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+This package embeds:
+  - @noble/hashes (MIT) — Paul Miller
+  - @noble/ed25519 (MIT) — Paul Miller
+  - QuickJS via Javy (MIT) — Bytecode Alliance
