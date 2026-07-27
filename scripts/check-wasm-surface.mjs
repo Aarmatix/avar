@@ -6,6 +6,8 @@ import { readFileSync } from "node:fs";
 const ALLOW = new Set([
   "memory", "_start",             // Javy/WASI defaults
   "canonical_wasi", "wizer.initialize",
+  "canonical_abi_free", "canonical_abi_realloc",
+  "config_schema", "compile_src", "invoke",
 ]);
 const ALLOW_PREFIX = ["javy_"];
 
