@@ -20,7 +20,9 @@ jobs:
           node-version: "20"
       - name: Install Javy
         run: |
-          curl -sSL https://github.com/bytecodealliance/javy/releases/latest/download/javy-x86_64-linux-v3.0.0.gz \
+          # Pin to a known-good release; "latest" filename drifts.
+          JAVY_VER=v5.0.4
+          curl -sSL https://github.com/bytecodealliance/javy/releases/download/${JAVY_VER}/javy-x86_64-linux-${JAVY_VER}.gz \
             | gunzip > /usr/local/bin/javy && chmod +x /usr/local/bin/javy
           javy --version
       - name: Install deps
