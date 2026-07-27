@@ -1,0 +1,33 @@
+{
+  "name": "chain break at index 1 is rejected",
+  "kind": "chain",
+  "publicKey": "ff0c171736266472d1180698e3d71345bb9ce7a9e3ef24ba2d91f3b1b0d347a0",
+  "input": {
+    "receipts": [
+      {
+        "v": 1,
+        "id": "00000000-0000-4000-8000-000000000091",
+        "ts": "2026-01-01T00:00:00.000Z",
+        "prev": null,
+        "payload": {
+          "action": "first"
+        },
+        "sig": "25754ef531ba534c882b7f57a44d966b597abb198f0ab193b56769f9b73cf6febd1222a977598613c08a20a51caa64e8694b0db290e5c675b75d1bdcdded5308"
+      },
+      {
+        "v": 1,
+        "id": "00000000-0000-4000-8000-000000000092",
+        "ts": "2026-01-01T00:00:01.000Z",
+        "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+        "payload": {
+          "action": "second"
+        },
+        "sig": "d9229af273100fdab4787f659b2c5ddcbe09e2c82c86f8089c51a39ed47aa5ca5a29748dcca7570000797edeca53a914de1f5df951b96dd2e26e3a9431fec602"
+      }
+    ]
+  },
+  "expect": {
+    "ok": false,
+    "reason": "chain-break@1"
+  }
+}

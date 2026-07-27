@@ -1,0 +1,18 @@
+{
+  "name": "signed receipt still verifies when input keys are re-ordered",
+  "kind": "receipt",
+  "publicKey": "ff0c171736266472d1180698e3d71345bb9ce7a9e3ef24ba2d91f3b1b0d347a0",
+  "input": {
+    "payload": {
+      "action": "noop"
+    },
+    "prev": null,
+    "ts": "2026-01-01T00:00:00.000Z",
+    "id": "00000000-0000-4000-8000-000000000007",
+    "v": 1,
+    "sig": "d985af09a64f959f0b4d8ac6a7f3ccc8997a8816c415a6346c8d905309a4d6c2af859f758a95d1e38be3f69f7683348df9b0f546627df699070212e6adc4c204"
+  },
+  "expect": {
+    "ok": true
+  }
+}

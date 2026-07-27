@@ -1,7 +1,7 @@
 {
   "name": "valid receipt, empty prev",
   "kind": "receipt",
-  "publicKey": "46d97aa78f345fe42dc09ccea9c28024bee47d5b3c9e4e914e8818426cdfc258",
+  "publicKey": "ff0c171736266472d1180698e3d71345bb9ce7a9e3ef24ba2d91f3b1b0d347a0",
   "input": {
     "v": 1,
     "id": "00000000-0000-4000-8000-000000000001",
@@ -10,7 +10,7 @@
     "payload": {
       "action": "noop"
     },
-    "sig": "1273391e26fb9272313a335bb2e77ae630716ee5e71b5d301fa58ff895f28f046a10694620f65bcd5b23124e80b916ddc48ff7f2a8d4e24071dc934964984f00"
+    "sig": "5d9f33a13fff8880fb7a97a7644c3a2a8e87aca69065e8e1bd557d7785f67c9bf1c042e6edfea690ac39f3af3c644b69c3611be82580713424df6a1b0073bd08"
   },
   "expect": {
     "ok": true

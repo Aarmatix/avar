@@ -1,0 +1,32 @@
+{
+  "name": "two-receipt chain verifies",
+  "kind": "chain",
+  "publicKey": "ff0c171736266472d1180698e3d71345bb9ce7a9e3ef24ba2d91f3b1b0d347a0",
+  "input": {
+    "receipts": [
+      {
+        "v": 1,
+        "id": "00000000-0000-4000-8000-000000000081",
+        "ts": "2026-01-01T00:00:00.000Z",
+        "prev": null,
+        "payload": {
+          "action": "first"
+        },
+        "sig": "c1f37c75959b099cf4d593d3d38dda0c00a62034f8e84c76a1ccb92ce9af093c29c68c11af99acce1a16521cd9ec890b3aa36494c30eaf1eee54e203191b470c"
+      },
+      {
+        "v": 1,
+        "id": "00000000-0000-4000-8000-000000000082",
+        "ts": "2026-01-01T00:00:01.000Z",
+        "prev": "4d096bf344d97d223f67a671cb4fe4454ce3e5523d6c8d67d2564a28617a951b",
+        "payload": {
+          "action": "second"
+        },
+        "sig": "20356c9d3639c0092458525c79e1c0077a2561b8cb0c3e0c416d5b8e229ba46dfac5a47fdb9e2740633bc19073b6f9dfa6a178190cb326bf6baa0a9dfb60d708"
+      }
+    ]
+  },
+  "expect": {
+    "ok": true
+  }
+}

@@ -1,7 +1,7 @@
 {
   "name": "tampered payload after signing",
   "kind": "receipt",
-  "publicKey": "46d97aa78f345fe42dc09ccea9c28024bee47d5b3c9e4e914e8818426cdfc258",
+  "publicKey": "ff0c171736266472d1180698e3d71345bb9ce7a9e3ef24ba2d91f3b1b0d347a0",
   "input": {
     "v": 1,
     "id": "00000000-0000-4000-8000-000000000002",
@@ -10,7 +10,7 @@
     "payload": {
       "action": "TAMPERED"
     },
-    "sig": "9212dc4c5ec38e1642c4a0765f7661c7863dd9be029a4d42546f428a7cd67eb4a3455b6fb610d659de6beba315e00754bb9f6784c79b0a2d9a591e88fe4e2700"
+    "sig": "feb78b459ac462ed21703a6a38812939503fe9ed287b384ae0a9a4dbd7addd4324332f164badfa07fe4b3aaeb5d890a9d80b3632b7a20ff5e1f4f6cefe28df00"
   },
   "expect": {
     "ok": false,

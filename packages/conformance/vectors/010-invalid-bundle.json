@@ -1,0 +1,12 @@
+{
+  "name": "bundle without receipts array is rejected",
+  "kind": "chain",
+  "publicKey": "ff0c171736266472d1180698e3d71345bb9ce7a9e3ef24ba2d91f3b1b0d347a0",
+  "input": {
+    "notReceipts": []
+  },
+  "expect": {
+    "ok": false,
+    "reason": "invalid-bundle"
+  }
+}

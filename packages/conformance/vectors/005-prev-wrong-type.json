@@ -1,0 +1,19 @@
+{
+  "name": "prev with wrong type is rejected",
+  "kind": "receipt",
+  "publicKey": "ff0c171736266472d1180698e3d71345bb9ce7a9e3ef24ba2d91f3b1b0d347a0",
+  "input": {
+    "v": 1,
+    "id": "00000000-0000-4000-8000-000000000005",
+    "ts": "2026-01-01T00:00:00.000Z",
+    "prev": 42,
+    "payload": {
+      "action": "noop"
+    },
+    "sig": "d9ea71f05e880e748f0b854286617c1ca6b157c319533a1d036a267650d0346050d96427c149182cfe05bb05a8d07df08ca319e9186e41427d0d0f636f5a9a0d"
+  },
+  "expect": {
+    "ok": false,
+    "reason": "invalid-shape"
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "@avar-standard/verify-wasm",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Portable WebAssembly conformance implementation of the AVAR verifier. Verification-only, browsers/edge/air-gapped, built from the public AVAR specification.",
   "license": "Apache-2.0",
   "type": "module",
@@ -16,7 +16,8 @@
     "dist/",
     "README.md",
     "NOTICE",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build:js": "node scripts/bundle.mjs",

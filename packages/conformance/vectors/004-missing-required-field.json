@@ -1,0 +1,18 @@
+{
+  "name": "missing required field v is rejected",
+  "kind": "receipt",
+  "publicKey": "ff0c171736266472d1180698e3d71345bb9ce7a9e3ef24ba2d91f3b1b0d347a0",
+  "input": {
+    "id": "00000000-0000-4000-8000-000000000004",
+    "ts": "2026-01-01T00:00:00.000Z",
+    "prev": null,
+    "payload": {
+      "action": "noop"
+    },
+    "sig": "f255c11243cba3a885f86d76d2b682302fb896511691f2a05673123f55a04f46eaedce4e688ad918b0acd67b3ebeb9d812d51fb397a76f8f512f705f84393b00"
+  },
+  "expect": {
+    "ok": false,
+    "reason": "invalid-shape"
+  }
+}

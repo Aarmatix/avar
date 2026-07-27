@@ -1,7 +1,7 @@
 {
   "name": "non-object input rejected",
   "kind": "receipt",
-  "publicKey": "REPLACE_WITH_HEX_PUBKEY_FROM_FIXTURE_GENERATOR",
+  "publicKey": "ff0c171736266472d1180698e3d71345bb9ce7a9e3ef24ba2d91f3b1b0d347a0",
   "input": "not-json",
   "expect": {
     "ok": false,

@@ -1,0 +1,19 @@
+{
+  "name": "malformed signature hex is rejected",
+  "kind": "receipt",
+  "publicKey": "ff0c171736266472d1180698e3d71345bb9ce7a9e3ef24ba2d91f3b1b0d347a0",
+  "input": {
+    "v": 1,
+    "id": "00000000-0000-4000-8000-000000000006",
+    "ts": "2026-01-01T00:00:00.000Z",
+    "prev": null,
+    "payload": {
+      "action": "noop"
+    },
+    "sig": "cf0329af6e08efe8f74f7d3fe3ff04e58edb5d769e8c516b7bfe42c439930f4bd563b37bf7fc3e8fe10fec409b58845712947cf89cdbdc7d2f3cf4f29b77dc0"
+  },
+  "expect": {
+    "ok": false,
+    "reason": "signature-malformed"
+  }
+}
