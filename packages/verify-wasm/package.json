@@ -1,0 +1,55 @@
+{
+  "name": "@avar-standard/verify-wasm",
+  "version": "0.1.0",
+  "description": "Portable WebAssembly conformance implementation of the AVAR verifier. Verification-only, browsers/edge/air-gapped, built from the public AVAR specification.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./wasm": "./dist/verify.wasm"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "NOTICE",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build:js": "node scripts/bundle.mjs",
+    "build:wasm": "javy build dist/bundle.js -o dist/verify.wasm",
+    "build": "npm run build:js && npm run build:wasm && node scripts/emit-loader.mjs",
+    "test": "node --test test/",
+    "test:parity": "node test/parity.test.mjs",
+    "test:surface": "node ../../scripts/check-wasm-surface.mjs dist/verify.wasm",
+    "test:strings": "node ../../scripts/check-wasm-strings.mjs dist/verify.wasm",
+    "prepublishOnly": "npm run build && npm test && npm run test:surface && npm run test:strings"
+  },
+  "dependencies": {
+    "@noble/hashes": "^1.4.0",
+    "@noble/ed25519": "^2.1.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.23.0"
+  },
+  "keywords": [
+    "avar",
+    "avar-standard",
+    "verifier",
+    "wasm",
+    "conformance",
+    "verification-only",
+    "receipts"
+  ],
+  "bugs": {
+    "url": "https://github.com/Aarmatix/avar/issues"
+  },
+  "homepage": "https://github.com/Aarmatix/avar/tree/main/packages/verify-wasm#readme",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

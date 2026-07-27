@@ -1,0 +1,7 @@
+{
+  "name": "malformed input bytes",
+  "kind": "receipt",
+  "publicKey": "REPLACE_WITH_HEX_PUBKEY_FROM_FIXTURE_GENERATOR",
+  "input": "not-json",
+  "expect": { "ok": false, "reason": "invalid-json" }
+}
