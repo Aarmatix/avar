@@ -25,7 +25,7 @@ jobs:
           curl -sSL https://github.com/bytecodealliance/javy/releases/download/${JAVY_VER}/javy-x86_64-linux-${JAVY_VER}.gz \
             | gunzip > /usr/local/bin/javy && chmod +x /usr/local/bin/javy
       - name: Install
-        run: npm ci
+        run: npm install --no-audit --no-fund
         working-directory: packages/verify-wasm
       - name: Build + verify surface + parity
         run: |
