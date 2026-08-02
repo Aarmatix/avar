@@ -28,6 +28,26 @@ const result = await verifyReceipt(receipt);
 console.log(result.valid, result.producer, result.spec_version);
 ```
 
+## Governance Recovery Points (spec addendum 1.13)
+
+A Governance Recovery Point (GRP) is derived state: it names the artifacts a
+workspace resumes governed execution from, and contains none of them. Anyone
+can verify one without access to policy text, key material, or receipt bodies.
+
+```ts
+import { verifyRecoveryPoint } from "@avar-standard/core";
+
+const report = await verifyRecoveryPoint(recoveryPoint);
+// { ok, identityDigest, digestMatches, signatureVerified, issues }
+```
+
+`identityDigest` is `sha256(canonicalize({ kind, version, workspaceId, refs }))`.
+The envelope (`createdAt`, `provenance`, `changeSetId?`, `deviceFingerprint`,
+`devicePubKey`, `signature`) sits outside the digest, so two devices summarizing
+identical governance state produce identical digests. Verification is pure: no
+clock, no network. Use `dedupeRecoveryPoints()` to collapse envelopes that
+describe the same state.
+
 ## License
 
 Apache-2.0. See `LICENSE`.

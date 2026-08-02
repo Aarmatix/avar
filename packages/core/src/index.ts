@@ -24,3 +24,28 @@ export {
 export { VerifyError, ERROR_CODES } from "./errors.js";
 export type { ErrorCode } from "./errors.js";
 
+
+// AVAR spec addendum 1.13 — Governance Recovery Points.
+export {
+  verifyRecoveryPoint,
+  validateRecoveryPointShape,
+  computeRecoveryPointIdentity,
+  recoveryPointIdentityBody,
+  recoveryPointSignedBody,
+  dedupeRecoveryPoints,
+  RECOVERY_POINT_KIND,
+  RECOVERY_POINT_VERSION,
+  RECOVERY_POINT_REF_KEYS,
+  RECOVERY_POINT_PROVENANCE,
+} from "./recovery-point.js";
+export type {
+  RecoveryPoint,
+  RecoveryPointEnvelope,
+  RecoveryPointRefs,
+  RecoveryPointRefKey,
+  RecoveryPointProvenance,
+  RecoveryPointReport,
+  RecoveryPointIssue,
+  RecoveryPointErrorCode,
+  VerifyRecoveryPointOptions,
+} from "./recovery-point.js";
