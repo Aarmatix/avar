@@ -3,7 +3,7 @@
 **Status: archived, non-conformant. Do not revive this source.**
 
 This package was published as `0.1.1` and did not meet the AVAR implementation
-requirements now recorded in [`docs/avar/IMPLEMENTATION.md`](../../../docs/avar/IMPLEMENTATION.md).
+requirements now recorded in [`docs/avar/IMPLEMENTATION.md`](../../docs/avar/IMPLEMENTATION.md).
 Specifically, it failed requirement 5 (**installable and callable from its
 published artifact**): the published tarball omitted `verify.js`, so the
 declared entry point could not be imported.

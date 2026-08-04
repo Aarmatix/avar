@@ -37,7 +37,7 @@ Apache-2.0 licensed.
 release did not meet the AVAR implementation requirements (the published
 tarball was not importable), and `0.1.2` is a terminal tombstone. The npm name
 stays reserved and will not be reused for a different artifact. See
-[`packages/_archived/verify-wasm/ARCHIVED.md`](./packages/_archived/verify-wasm/ARCHIVED.md).
+[`attic/verify-wasm/ARCHIVED.md`](./attic/verify-wasm/ARCHIVED.md).
 
 `@avar-standard/verify-rs` is reserved for a future independently developed
 implementation. None exists today, and AVAR does not require one.
