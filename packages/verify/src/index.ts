@@ -28,3 +28,26 @@ export type {
   /** @deprecated Use EvidenceType. */
   Depth,
 } from "@avar-standard/core";
+
+// AVAR 1.0 (Normative) — Bundle-level verification (SPEC §5, §6).
+export {
+  SPEC_VERSION,
+  parseBundle,
+  verifyBundle,
+  verifyBundleBytes,
+  canonicalReport,
+  evaluateCompatibility,
+  ENTRY_FIELDS_1_0,
+} from "@avar-standard/core";
+
+export type {
+  Bundle,
+  BundleManifest,
+  Entry,
+  Step,
+  Issue,
+  IssueKind,
+  Verdict,
+  VerificationReport,
+  CompatibilityReport,
+} from "@avar-standard/core";

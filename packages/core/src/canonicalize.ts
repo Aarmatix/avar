@@ -38,7 +38,9 @@ function canonicalNumber(n: number): string {
   return String(n);
 }
 
-function canonicalString(s: string): string {
+function canonicalString(input: string): string {
+  // AVAR 1.0 §2 additionally requires NFC normalization of every string and key.
+  const s = input.normalize("NFC");
   let out = '"';
   for (let i = 0; i < s.length; i++) {
     const c = s.charCodeAt(i);

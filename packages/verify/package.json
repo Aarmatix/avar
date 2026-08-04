@@ -1,6 +1,6 @@
 {
   "name": "@avar-standard/verify",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "High-level AVAR receipt verification API. The recommended entry point for applications that need to verify AVAR receipts independently of any commercial runtime.",
   "license": "Apache-2.0",
   "type": "module",
@@ -22,7 +22,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@avar-standard/core": "^0.1.0"
+    "@avar-standard/core": "^0.3.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",

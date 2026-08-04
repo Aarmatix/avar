@@ -49,3 +49,43 @@ export type {
   RecoveryPointErrorCode,
   VerifyRecoveryPointOptions,
 } from "./recovery-point.js";
+
+// AVAR 1.0 (Normative) — Entry, Bundle, and Verification Result.
+export { ENTRY_FIELDS_1_0 } from "./entry.js";
+export type { Entry, Step, ToolStep, TextStep, DecisionStep, ClosureBlock, AgentIdentity, Outcome } from "./entry.js";
+export {
+  GENESIS_PREV_HASH,
+  GENESIS_PREV_STEP_HASH,
+  sha256Hex,
+  deviceFingerprintOf,
+  signedBody,
+  entryHashOf,
+  stepHashOf,
+  verifyBytes,
+  verifyCanonical,
+} from "./chain.js";
+export {
+  COMPAT_SPEC_ID,
+  SUPPORTED_MAJORS,
+  READABILITY_HORIZON_YEARS,
+  parseSpecVersion,
+  unresolvedFieldsOf,
+  evaluateCompatibility,
+} from "./compat.js";
+export type { CompatibilityReport, Readability, UnresolvedField } from "./compat.js";
+export {
+  SPEC_VERSION,
+  readZip,
+  parseBundle,
+  verifyBundle,
+  verifyBundleBytes,
+  canonicalReport,
+} from "./bundle.js";
+export type {
+  Bundle,
+  BundleManifest,
+  Issue,
+  IssueKind,
+  Verdict,
+  VerificationReport,
+} from "./bundle.js";

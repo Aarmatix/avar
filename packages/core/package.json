@@ -1,6 +1,6 @@
 {
   "name": "@avar-standard/core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "AVAR receipt types, canonicalization, evidence validation, and signature verification primitives.",
   "license": "Apache-2.0",
   "type": "module",
