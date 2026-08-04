@@ -33,11 +33,14 @@ Apache-2.0 licensed.
 
 ### Browser / WASM
 
-A separate `@avar-standard/verify-wasm` package for browser and non-Node
-targets is **reserved but not yet published**. See
-[`docs/adr/0001-wasm-packaging.md`](./docs/adr/0001-wasm-packaging.md) for
-the decision to keep WASM out of `@avar-standard/verify` and ship it as its
-own package when browser demand is confirmed.
+`@avar-standard/verify-wasm` is **deprecated and archived**. Its `0.1.1`
+release did not meet the AVAR implementation requirements (the published
+tarball was not importable), and `0.1.2` is a terminal tombstone. The npm name
+stays reserved and will not be reused for a different artifact. See
+[`packages/_archived/verify-wasm/ARCHIVED.md`](./packages/_archived/verify-wasm/ARCHIVED.md).
+
+`@avar-standard/verify-rs` is reserved for a future independently developed
+implementation. None exists today, and AVAR does not require one.
 
 ### Supported platforms
 
@@ -57,5 +60,25 @@ Exit codes: `0` valid, `1` rejected with an AVAR error code, `2` usage error.
 
 ## Conformance
 
-Every commit runs against [Aarmatix/avar-conformance](https://github.com/Aarmatix/avar-conformance).
-A third-party verifier is "AVAR 1.10 compliant" iff it passes the same suite.
+The AVAR standard is defined by three normative documents, all in this repository:
+
+| Document | Answers |
+| --- | --- |
+| [`docs/avar/SPEC.md`](./docs/avar/SPEC.md) | What is an AVAR Entry, Bundle, and Verification Result? |
+| [`docs/avar/IMPLEMENTATION.md`](./docs/avar/IMPLEMENTATION.md) | When may software call itself an AVAR implementation? |
+| [`docs/avar/fixtures/`](./docs/avar/fixtures) | Did it actually? |
+
+The fixture corpus is published immutably as
+[`@avar-standard/fixtures`](https://www.npmjs.com/package/@avar-standard/fixtures).
+Software may describe itself as an AVAR verifier only if it satisfies the six
+requirements in `IMPLEMENTATION.md` **for every AVAR version it claims to
+support**. Third-party implementations are encouraged but not required; one
+conforming implementation is enough to define the standard.
+
+### Conformance matrix (AVAR 1.0)
+
+| Implementation | Family | Author | Independently developed | Fixtures |
+| --- | --- | --- | --- | --- |
+| `@avar-standard/verify` | JavaScript | Aarmatix | No | 13/13 |
+| `avar` binary | JavaScript | Aarmatix | No | 13/13 |
+| _(none yet)_ | — | third party | Yes | — |

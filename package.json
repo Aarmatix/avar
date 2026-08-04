@@ -6,7 +6,9 @@
   "license": "Apache-2.0",
   "type": "module",
   "workspaces": [
-    "packages/*"
+    "packages/core",
+    "packages/verify",
+    "packages/conformance"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
