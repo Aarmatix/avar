@@ -36,3 +36,15 @@ Reason codes are the enum in the AVAR spec's Verifier Errors section
 
 New vectors MUST land with a spec addendum entry describing the
 scenario. Bumping a vector after publication requires a MINOR spec bump.
+
+## Evidence transport conformance
+
+Vectors above define what a conforming *verifier* must return. The companion
+suite in [`RELAY.md`](./RELAY.md) plus `test/relay-transport.test.mjs` defines
+what a conforming *evidence transport* must preserve (R1–R6): canonical
+identity, content preservation, ordering, replay determinism, offline
+verification, and structure-only validation.
+
+```
+npm test --workspace @avar-standard/conformance
+```
