@@ -1,8 +1,8 @@
 # AVAR Conformance Suite
 
 Deterministic test vectors that define what a conforming AVAR verifier
-MUST return. Every implementation (`@avar-standard/verify`,
-`@avar-standard/verify-wasm`, and future native verifiers) MUST pass
+MUST return. Every implementation (`@avar-standard/verify` and future native
+verifiers) MUST pass
 every vector byte-identically.
 
 ## Layout
