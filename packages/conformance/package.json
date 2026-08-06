@@ -1,0 +1,24 @@
+{
+  "name": "@avar-standard/conformance",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AVAR conformance vectors and the evidence-transport conformance suite. Not published to npm.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "pretest": "cd ../core && npm run build",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@avar-standard/core": "^0.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aarmatix/avar.git",
+    "directory": "packages/conformance"
+  },
+  "homepage": "https://github.com/Aarmatix/avar"
+}
